@@ -63,15 +63,15 @@ def classify_input_file(filename):
     ftype = IT_Invalid
     err_msg = None
     if not os.path.exists(filename):
-        err_msg = "'%s' does not exist" % filename
+        err_msg = f"'{filename}' does not exist"
     elif not os.path.isfile(filename):
-        err_msg = "'%s' does not name a file" % filename
+        err_msg = f"'{filename}' does not name a file"
     elif is_executable_file(filename):
         ftype = IT_Executable
     elif is_json_file(filename):
         ftype = IT_JSON
     else:
-        err_msg = "'%s' does not name a valid benchmark executable or JSON file" % filename
+        err_msg = f"'{filename}' does not name a valid benchmark executable or JSON file"
     return ftype, err_msg
 
 
@@ -83,7 +83,7 @@ def check_input_file(filename):
     """
     ftype, msg = classify_input_file(filename)
     if ftype == IT_Invalid:
-        print("Invalid input file: %s" % msg)
+        print(f"Invalid input file: {msg}")
         sys.exit(1)
     return ftype
 
@@ -151,11 +151,10 @@ def run_benchmark(exe_name, benchmark_flags):
         is_temp_output = True
         thandle, output_name = tempfile.mkstemp()
         os.close(thandle)
-        benchmark_flags = list(benchmark_flags) + \
-            ['--benchmark_out=%s' % output_name]
+        benchmark_flags = (list(benchmark_flags) + [f'--benchmark_out={output_name}'])
 
     cmd = [exe_name] + benchmark_flags
-    print("RUNNING: %s" % ' '.join(cmd))
+    print(f"RUNNING: {' '.join(cmd)}")
     exitCode = subprocess.call(cmd)
     if exitCode != 0:
         print('TEST FAILED...')
@@ -178,4 +177,4 @@ def run_or_load_benchmark(filename, benchmark_flags):
         return load_benchmark_results(filename)
     if ftype == IT_Executable:
         return run_benchmark(filename, benchmark_flags)
-    raise ValueError('Unknown file type %s' % ftype)
+    raise ValueError(f'Unknown file type {ftype}')

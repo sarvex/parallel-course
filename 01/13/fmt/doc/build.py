@@ -88,18 +88,25 @@ def build_docs(version='dev', **kwargs):
     'warning: Internal inconsistency: .* does not belong to any container!'
   ]
   for w in noisy_warnings:
-      out = re.sub('.*' + w + '\n', '', out)
+    out = re.sub(f'.*{w}' + '\n', '', out)
   print(out)
   if p.returncode != 0:
     raise CalledProcessError(p.returncode, cmd)
 
   html_dir = os.path.join(work_dir, 'html')
   main_versions = reversed(versions[-3:])
-  check_call([os.path.join(work_dir, 'virtualenv', 'bin', 'sphinx-build'),
-              '-Dbreathe_projects.format=' + os.path.abspath(doxyxml_dir),
-              '-Dversion=' + version, '-Drelease=' + version,
-              '-Aversion=' + version, '-Aversions=' + ','.join(main_versions),
-              '-b', 'html', doc_dir, html_dir])
+  check_call([
+      os.path.join(work_dir, 'virtualenv', 'bin', 'sphinx-build'),
+      f'-Dbreathe_projects.format={os.path.abspath(doxyxml_dir)}',
+      f'-Dversion={version}',
+      f'-Drelease={version}',
+      f'-Aversion={version}',
+      '-Aversions=' + ','.join(main_versions),
+      '-b',
+      'html',
+      doc_dir,
+      html_dir,
+  ])
   try:
     check_call(['lessc', '--verbose', '--clean-css',
                 '--include-path=' + os.path.join(doc_dir, 'bootstrap'),

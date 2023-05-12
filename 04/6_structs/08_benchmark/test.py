@@ -15,7 +15,7 @@ for i in range(nshifts):
     samps = 1 << (basampshift - i)
     x0.append(n)
 
-    args = ['-DTEST_SIZE={}'.format(n), '-DTEST_SAMPLES={}'.format(samps)]
+    args = [f'-DTEST_SIZE={n}', f'-DTEST_SAMPLES={samps}']
     sp.check_call(['cmake', '-B', 'build'] + args)
     sp.check_call(['cmake', '--build', 'build'])
     ret = sp.check_output(['build/testbench']).decode()

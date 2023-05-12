@@ -88,8 +88,10 @@ class BuildBazelExtension(build_ext.build_ext):
 
         if IS_WINDOWS:
             # Link with python*.lib.
-            for library_dir in self.library_dirs:
-                bazel_argv.append("--linkopt=/LIBPATH:" + library_dir)
+            bazel_argv.extend(
+                f"--linkopt=/LIBPATH:{library_dir}"
+                for library_dir in self.library_dirs
+            )
         elif sys.platform == "darwin" and platform.machine() == "x86_64":
             bazel_argv.append("--macos_minimum_os=10.9")
 

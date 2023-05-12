@@ -50,17 +50,13 @@ def get_codepoints(f):
         name = row[1]
         class_ = row[2]
 
-        if class_first is not None:
-            if not name.endswith("Last>"):
-                raise ValueError("Missing Last after First")
+        if class_first is not None and not name.endswith("Last>"):
+            raise ValueError("Missing Last after First")
 
         for c in range(prev_codepoint + 1, codepoint):
             yield Codepoint(c, class_first)
 
-        class_first = None
-        if name.endswith("First>"):
-            class_first = class_
-
+        class_first = class_ if name.endswith("First>") else None
         yield Codepoint(codepoint, class_)
         prev_codepoint = codepoint
 
@@ -77,7 +73,7 @@ def compress_singletons(singletons):
     for i in singletons:
         upper = i >> 8
         lower = i & 0xff
-        if len(uppers) == 0 or uppers[-1][0] != upper:
+        if not uppers or uppers[-1][0] != upper:
             uppers.append((upper, 1))
         else:
             upper, count = uppers[-1]
@@ -100,13 +96,11 @@ def compress_normal(normal):
         assert truelen < 0x8000 and falselen < 0x8000
         entry = []
         if truelen > 0x7f:
-            entry.append(0x80 | (truelen >> 8))
-            entry.append(truelen & 0xff)
+            entry.extend((0x80 | (truelen >> 8), truelen & 0xff))
         else:
             entry.append(truelen & 0x7f)
         if falselen > 0x7f:
-            entry.append(0x80 | (falselen >> 8))
-            entry.append(falselen & 0xff)
+            entry.extend((0x80 | (falselen >> 8), falselen & 0xff))
         else:
             entry.append(falselen & 0x7f)
 
@@ -115,17 +109,17 @@ def compress_normal(normal):
     return compressed
 
 def print_singletons(uppers, lowers, uppersname, lowersname):
-    print("  static constexpr singleton {}[] = {{".format(uppersname))
+    print(f"  static constexpr singleton {uppersname}[] = {{")
     for u, c in uppers:
         print("    {{{:#04x}, {}}},".format(u, c))
     print("  };")
-    print("  static constexpr unsigned char {}[] = {{".format(lowersname))
+    print(f"  static constexpr unsigned char {lowersname}[] = {{")
     for i in range(0, len(lowers), 8):
         print("    {}".format(" ".join("{:#04x},".format(l) for l in lowers[i:i+8])))
     print("  };")
 
 def print_normal(normal, normalname):
-    print("  static constexpr unsigned char {}[] = {{".format(normalname))
+    print(f"  static constexpr unsigned char {normalname}[] = {{")
     for v in normal:
         print("    {}".format(" ".join("{:#04x},".format(i) for i in v)))
     print("  };")
@@ -152,18 +146,15 @@ def main():
                 singletons0.append(a)
         elif a == b - 2:
             if a & CUTOFF:
-                singletons1.append(a & ~CUTOFF)
-                singletons1.append((a + 1) & ~CUTOFF)
+                singletons1.extend((a & ~CUTOFF, (a + 1) & ~CUTOFF))
             else:
-                singletons0.append(a)
-                singletons0.append(a + 1)
+                singletons0.extend((a, a + 1))
+        elif a >= 2 * CUTOFF:
+            extra.append((a, b - a))
+        elif a & CUTOFF:
+            normal1.append((a & ~CUTOFF, b - a))
         else:
-            if a >= 2 * CUTOFF:
-                extra.append((a, b - a))
-            elif a & CUTOFF:
-                normal1.append((a & ~CUTOFF, b - a))
-            else:
-                normal0.append((a, b - a))
+            normal0.append((a, b - a))
 
     singletons0u, singletons0l = compress_singletons(singletons0)
     singletons1u, singletons1l = compress_singletons(singletons1)

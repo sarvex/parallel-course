@@ -9,8 +9,7 @@ def rmtree_if_exists(dir):
     try:
         shutil.rmtree(dir)
     except OSError as e:
-        if e.errno == errno.ENOENT:
-            pass
+        pass
 
 # Build the docs.
 fmt_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -23,18 +22,18 @@ repo = 'fmtlib.github.io'
 branch = os.environ['GITHUB_REF']
 is_ci = 'CI' in os.environ
 if is_ci and branch != 'refs/heads/master':
-    print('Branch: ' + branch)
+    print(f'Branch: {branch}')
     exit(0) # Ignore non-master branches
 if is_ci and 'KEY' not in os.environ:
     # Don't update the repo if building in CI from an account that doesn't have
     # push access.
-    print('Skipping update of ' + repo)
+    print(f'Skipping update of {repo}')
     exit(0)
 
 # Clone the fmtlib.github.io repo.
 rmtree_if_exists(repo)
 git_url = 'https://github.com/' if is_ci else 'git@github.com:'
-check_call(['git', 'clone', git_url + 'fmtlib/{}.git'.format(repo)])
+check_call(['git', 'clone', f'{git_url}fmtlib/{repo}.git'])
 
 # Copy docs to the repo.
 target_dir = os.path.join(repo, 'dev')

@@ -76,9 +76,9 @@ def calculate_change(old_val, new_val):
     """
     Return a float representing the decimal change between old_val and new_val.
     """
-    if old_val == 0 and new_val == 0:
-        return 0.0
     if old_val == 0:
+        if new_val == 0:
+            return 0.0
         return float(new_val - old_val) / (float(old_val + new_val) / 2)
     return float(new_val - old_val) / abs(old_val)
 
@@ -88,8 +88,7 @@ def filter_benchmark(json_orig, family, replacement=""):
     Apply a filter to the json, and only leave the 'family' of benchmarks.
     """
     regex = re.compile(family)
-    filtered = {}
-    filtered['benchmarks'] = []
+    filtered = {'benchmarks': []}
     for be in json_orig['benchmarks']:
         if not regex.search(be['name']):
             continue
@@ -104,10 +103,11 @@ def get_unique_benchmark_names(json):
     While *keeping* the order, give all the unique 'names' used for benchmarks.
     """
     seen = set()
-    uniqued = [x['name'] for x in json['benchmarks']
-               if x['name'] not in seen and
-               (seen.add(x['name']) or True)]
-    return uniqued
+    return [
+        x['name']
+        for x in json['benchmarks']
+        if x['name'] not in seen and (seen.add(x['name']) or True)
+    ]
 
 
 def intersect(list1, list2):
@@ -133,13 +133,17 @@ def partition_benchmarks(json1, json2):
     names = intersect(json1_unique_names, json2_unique_names)
     partitions = []
     for name in names:
-        time_unit = None
-        # Pick the time unit from the first entry of the lhs benchmark.
-        # We should be careful not to crash with unexpected input.
-        for x in json1['benchmarks']:
-            if (x['name'] == name and is_potentially_comparable_benchmark(x)):
-                time_unit = x['time_unit']
-                break
+        time_unit = next(
+            (
+                x['time_unit']
+                for x in json1['benchmarks']
+                if (
+                    x['name'] == name
+                    and is_potentially_comparable_benchmark(x)
+                )
+            ),
+            None,
+        )
         if time_unit is None:
             continue
         # Filter by name and time unit.
@@ -167,12 +171,14 @@ def calculate_geomean(json):
     Extract all real/cpu times from all the benchmarks as seconds,
     and calculate their geomean.
     """
-    times = []
-    for benchmark in json['benchmarks']:
-        if 'run_type' in benchmark and benchmark['run_type'] == 'aggregate':
-            continue
-        times.append([get_timedelta_field_as_seconds(benchmark, 'real_time'),
-                      get_timedelta_field_as_seconds(benchmark, 'cpu_time')])
+    times = [
+        [
+            get_timedelta_field_as_seconds(benchmark, 'real_time'),
+            get_timedelta_field_as_seconds(benchmark, 'cpu_time'),
+        ]
+        for benchmark in json['benchmarks']
+        if 'run_type' not in benchmark or benchmark['run_type'] != 'aggregate'
+    ]
     return gmean(times) if times else array([])
 
 
@@ -351,7 +357,11 @@ def print_difference_report(
     for benchmark in json_diff_report:
         # *If* we were asked to only include aggregates,
         # and if it is non-aggregate, then don't print it.
-        if not include_aggregates_only or not 'run_type' in benchmark or benchmark['run_type'] == 'aggregate':
+        if (
+            not include_aggregates_only
+            or 'run_type' not in benchmark
+            or benchmark['run_type'] == 'aggregate'
+        ):
             for measurement in benchmark['measurements']:
                 output_strs += [color_format(use_color,
                                              fmt_str,
@@ -1101,7 +1111,7 @@ class TestReportSorting(unittest.TestCase):
             "88 family 1 instance 1 aggregate"
         ]
 
-        for n in range(len(self.json['benchmarks']) ** 2):
+        for _ in range(len(self.json['benchmarks']) ** 2):
             random.shuffle(self.json['benchmarks'])
             sorted_benchmarks = util.sort_benchmark_results(self.json)[
                 'benchmarks']
